@@ -1,0 +1,30 @@
+language: generic
+sudo: required
+services:
+  - docker
+
+# specify what to build before the install
+# add dev builds here ,then add scripts for tests
+before_install:
+  - docker build -t talbendet/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run -e CI=true talbendet/react-test npm test
+
+# if all of the tests passed build images for production
+after_success:
+  - docker build -t talbendet/multi-client ./client
+  - docker build -t talbendet/multi-nginx ./nginx
+  - docker build -t talbendet/multi-server ./server
+  - docker build -t talbendet/multi-worker ./worker
+  # log in to docker CLI
+  # 1) get password from env variable and to stdin
+  # 2) docker login -u (-u is a flag for user name),
+  # 3) get user name from env variable
+  # 4) fet password from step 1 from stdin
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # push images to docker hub
+  - docker push talbendet/multi-client
+  - docker push talbendet/multi-nginx
+  - docker push talbendet/multi-server
+  - docker push talbendet/multi-worker
